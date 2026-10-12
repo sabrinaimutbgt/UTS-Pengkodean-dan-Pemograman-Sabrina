@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voucher Entri Transaksi Kas Keluar</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1e40af',
+                        success: '#16a34a',
+                        danger: '#dc2626'
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen p-4 sm:p-6 lg:p-8">
+
+    <div class="max-w-6xl mx-auto space-y-6">
+        
+        <!-- Header Aplikasi -->
+        <header class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <span class="inline-block px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full mb-1">Modul Akuntansi Keuangan</span>
+                <h1 class="text-2xl font-bold text-slate-900">Voucher Kas Keluar</h1>
+                <p class="text-sm text-slate-500">Pencatatan transaksi pembayaran dan pengeluaran kas secara akurat.</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="text-right">
+                    <p class="text-xs text-slate-400">Pengguna Aktif</p>
+                    <p id="current-user" class="text-sm font-semibold text-slate-700">Budi Santoso (Kasir)</p>
+                </div>
+                <div id="status-badge" class="px-3 py-1.5 rounded-lg text-xs font-bold tracking-wider uppercase bg-amber-100 text-amber-800 border border-amber-200">
+                    Draft
+                </div>
+            </div>
+        </header>
+
+        <!-- Form Voucher Utama -->
+        <main class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-6">
+            
+            <!-- 1. Header Voucher Form -->
+            <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Tanggal Transaksi <span class="text-red-500">*</span></label>
+                    <input type="date" id="voucher-date" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Nomor Bukti (Referensi) <span class="text-red-500">*</span></label>
+                    <input type="text" id="voucher-ref" placeholder="Contoh: VKK-2026-001" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div class="md:col-span-1">
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Deskripsi / Keterangan <span class="text-red-500">*</span></label>
+                    <input type="text" id="voucher-desc" placeholder="Contoh: Pembayaran Gaji Karyawan Bulan Ini" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+            </section>
+
+            <!-- 2. Tabel Baris Jurnal Dinamis -->
+            <section class="space-y-3">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-sm font-bold uppercase tracking-wider text-slate-700">Detail Jurnal Transaksi</h2>
+                    <button type="button" id="btn-add-row" onclick="addRow()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition flex items-center gap-1 shadow-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        Tambah Baris
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto rounded-lg border border-slate-200">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700 text-xs font-semibold uppercase tracking-wider border-b border-slate-200">
+                                <th class="p-3 w-1/4">Kode Akun</th>
+                                <th class="p-3 w-1/4">Nama Akun</th>
+                                <th class="p-3 w-1/5 text-right">Debit (Rp)</th>
+                                <th class="p-3 w-1/5 text-right">Kredit (Rp)</th>
+                                <th class="p-3 w-12 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="journal-tbody" class="divide-y divide-slate-200 text-sm">
+                            <!-- Baris jurnal akan dirender melalui JavaScript -->
+                        </tbody>
+                        <tfoot>
+                            <tr class="bg-slate-50 font-semibold border-t-2 border-slate-200">
+                                <td class="p-3 text-right" colspan="2">TOTAL:</td>
+                                <td id="total-debit" class="p-3 text-right text-slate-900">Rp 0</td>
+                                <td id="total-credit" class="p-3 text-right text-slate-900">Rp 0</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 3 & 4. Live Balanced Indicator & Summary Bar -->
+            <section class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div class="flex items-center gap-3">
+                    <div id="balance-indicator" class="px-4 py-2 rounded-lg font-bold text-xs tracking-wide uppercase bg-red-100 text-red-700 border border-red-300 flex items-center gap-2">
+                        <span id="indicator-dot" class="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse"></span>
+                        <span id="indicator-text">TIDAK SEIMBANG</span>
+                    </div>
+                    <div id="diff-container" class="text-xs text-slate-600">
+                        Selisih: <span id="diff-value" class="font-bold text-red-600">Rp 0</span>
+                    </div>
+                </div>
+
+                <!-- 5. Tombol Submit & Tombol Jurnal Pembalik -->
+                <div class="flex items-center gap-3">
+                    <button type="button" id="btn-reverse" onclick="createReversingJournal()" class="hidden bg-purple-600 hover:bg-purple-700 text-white font-semibold px-5 py-2.5 rounded-lg text-sm transition shadow-sm items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        Buat Jurnal Pembalik
+                    </button>
+                    <button type="button" id="btn-submit" onclick="submitVoucher()" disabled class="bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-semibold px-6 py-2.5 rounded-lg text-sm transition shadow-sm flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        Posting Voucher
+                    </button>
+                </div>
+            </section>
+
+            <!-- Hidden Canvas element required by prompt specifications for architectural compliance -->
+            <div class="hidden">
+                <canvas id="voucherCanvas" width="400" height="200"></canvas>
+            </div>
+        </main>
+
+        <!-- 7. Panel Audit Log -->
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-3">
+            <div class="flex justify-between items-center">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-700">Panel Audit Log Aktivitas</h3>
+                <span class="text-xs text-slate-400">Pencatatan Real-time Sesi Aktif</span>
+            </div>
+            <div class="bg-slate-900 text-slate-100 rounded-lg p-4 font-mono text-xs max-h-48 overflow-y-auto space-y-1.5" id="audit-log-container">
+                <div class="text-slate-500">[System] Aplikasi voucher kas keluar berhasil dimuat. Siap digunakan.</div>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        // Daftar Akun Contoh
+        const accountList = [
+            { code: '1101', name: 'Kas' },
+            { code: '1201', name: 'Persediaan' },
+            { code: '2101', name: 'Utang Usaha' },
+            { code: '5101', name: 'Beban Gaji' },
+            { code: '5102', name: 'Beban Sewa' }
+        ];
+
+        const dummyUser = "Budi Santoso (Kasir)";
+        let voucherState = 'DRAFT'; // DRAFT atau POSTED
+        let originalVoucherRef = '';
+
+        // Inisialisasi awal saat halaman dimuat
+        window.onload = function() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('voucher-date').value = today;
+            document.getElementById('voucher-date').addEventListener('change', () => logActivity("Mengubah tanggal transaksi voucher"));
+            document.getElementById('voucher-ref').addEventListener('input', () => { validateForm(); logActivity("Mengubah nomor referensi bukti"); });
+            document.getElementById('voucher-desc').addEventListener('input', () => { validateForm(); logActivity("Mengubah deskripsi transaksi"); });
+
+            addRow();
+            addRow();
+            
+            logActivity("Sistem diinisialisasi dengan 2 baris jurnal awal.");
+            drawPlaceholderCanvas();
+        };
+
+        // Fungsi mencatat audit log
+        function logActivity(actionMessage) {
+            const container = document.getElementById('audit-log-container');
+            const now = new Date();
+            const timeString = now.toTimeString().split(' ')[0];
+            const logEntry = document.createElement('div');
+            logEntry.className = "flex items-center gap-2 border-b border-slate-800 pb-1 text-slate-300";
+            logEntry.innerHTML = `<span class="text-slate-500">[${timeString}]</span> <span class="text-blue-400 font-semibold">[${dummyUser}]</span> <span>${actionMessage}</span>`;
+            container.appendChild(logEntry);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Helper format angka ke gaya Indonesia (Rp 1.000.000)
+        function formatRupiah(number) {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
+        }
+
+        // Parsing nilai input berformat rupiah/string ke integer murni untuk mencegah error pembulatan desimal
+        function parseRupiahInput(valueStr) {
+            if (!valueStr) return 0;
+            // Hapus semua karakter non-digit
+            const clean = valueStr.toString().replace(/[^0-9]/g, '');
+            return parseInt(clean, 10) || 0;
+        }
+
+        // Handler saat user mengetik di input angka (format live ribuan gaya Indonesia)
+        function onNumberInput(inputEl) {
+            let rawVal = parseRupiahInput(inputEl.value);
+            // Simpan posisi kursor atau cukup set format visual
+            inputEl.value = rawVal === 0 ? '' : new Intl.NumberFormat('id-ID').format(rawVal);
+            calculateTotals();
+        }
+
+        // Handler saat input angka kehilangan fokus (blur) untuk merapikan tampilan kosong
+        function onNumberBlur(inputEl) {
+            let rawVal = parseRupiahInput(inputEl.value);
+            inputEl.value = rawVal === 0 ? '0' : new Intl.NumberFormat('id-ID').format(rawVal);
+            calculateTotals();
+        }
+
+        function onNumberFocus(inputEl) {
+            let rawVal = parseRupiahInput(inputEl.value);
+            inputEl.value = rawVal === 0 ? '' : rawVal;
+        }
+
+        // Fungsi menambah baris jurnal baru
+        function addRow(accountCode = '', debitVal = 0, creditVal = 0) {
+            if (voucherState === 'POSTED') return;
+
+            const tbody = document.getElementById('journal-tbody');
+            const row = tbody.insertRow();
+            row.className = "hover:bg-slate-50/80 transition";
+
+            let optionsHtml = `<option value="">-- Pilih Akun --</option>`;
+            accountList.forEach(acc => {
+                const selected = acc.code === accountCode ? 'selected' : '';
+                optionsHtml += `<option value="${acc.code}" ${selected}>${acc.code} - ${acc.name}</option>`;
+            });
+
+            const formattedDebit = debitVal > 0 ? new Intl.NumberFormat('id-ID').format(debitVal) : '0';
+            const formattedCredit = creditVal > 0 ? new Intl.NumberFormat('id-ID').format(creditVal) : '0';
+
+            row.innerHTML = `
+                <td class="p-3">
+                    <select class="account-code-select w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none" onchange="onAccountChange(this)">
+                        ${optionsHtml}
+                    </select>
+                </td>
+                <td class="p-3">
+                    <input type="text" class="account-name-input w-full bg-slate-100 rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600" readonly placeholder="Nama akun otomatis">
+                </td>
+                <td class="p-3">
+                    <input type="text" value="${formattedDebit}" class="debit-input w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-right focus:ring-2 focus:ring-blue-500 focus:outline-none" oninput="onNumberInput(this)" onfocus="onNumberFocus(this)" onblur="onNumberBlur(this)">
+                </td>
+                <td class="p-3">
+                    <input type="text" value="${formattedCredit}" class="credit-input w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-right focus:ring-2 focus:ring-blue-500 focus:outline-none" oninput="onNumberInput(this)" onfocus="onNumberFocus(this)" onblur="onNumberBlur(this)">
+                </td>
+                <td class="p-3 text-center">
+                    <button type="button" onclick="deleteRow(this)" class="text-slate-400 hover:text-red-600 transition p-1 rounded-md hover:bg-red-50" title="Hapus Baris">
+                        <svg class="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </td>
+            `;
+
+            // Set nama akun jika accountCode terisi
+            const selectEl = row.querySelector('.account-code-select');
+            accountSelectHandler(selectEl);
+
+            logActivity("Menambah baris jurnal baru");
+            calculateTotals();
+        }
+
+        function accountSelectHandler(selectElement) {
+            const selectedCode = selectElement.value;
+            const row = selectElement.closest('tr');
+            const nameInput = row.querySelector('.account-name-input');
+
+            const found = accountList.find(acc => acc.code === selectedCode);
+            if (found) {
+                nameInput.value = found.name;
+                logActivity(`Memilih akun ${found.code} - ${found.name}`);
+            } else {
+                nameInput.value = '';
+            }
+            calculateTotals();
+        }
+
+        function onAccountChange(el) {
+            accountSelectHandler(el);
+        }
+
+        // Fungsi menghapus baris jurnal
+        function deleteRow(button) {
+            if (voucherState === 'POSTED') return;
+            const row = button.closest('tr');
+            const tbody = document.getElementById('journal-tbody');
+            if (tbody.rows.length <= 1) {
+                alertWarning("Voucher minimal harus memiliki 1 baris jurnal.");
+                return;
+            }
+            row.remove();
+            logActivity("Menghapus baris jurnal");
+            calculateTotals();
+        }
+
+        // Kalkulasi total dengan integer murni (satuan terkecil/sen) untuk mencegah floating point error
+        function calculateTotals() {
+            const tbody = document.getElementById('journal-tbody');
+            const rows = tbody.rows;
+
+            let totalDebitInt = 0;
+            let totalCreditInt = 0;
+            let allRowsValid = true;
+
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const debitInput = row.querySelector('.debit-input');
+                const creditInput = row.querySelector('.credit-input');
+                const accountSelect = row.querySelector('.account-code-select');
+
+                let debitVal = parseRupiahInput(debitInput.value);
+                let creditVal = parseRupiahInput(creditInput.value);
+
+                // Validasi per baris
+                let rowValid = true;
+                if (debitVal < 0 || creditVal < 0) rowValid = false;
+                if (debitVal > 0 && creditVal > 0) rowValid = false;
+                if (debitVal === 0 && creditVal === 0) rowValid = false;
+                if (!accountSelect.value) rowValid = false;
+
+                if (!rowValid) {
+                    allRowsValid = false;
+                    row.classList.add('bg-red-50/50');
+                } else {
+                    row.classList.remove('bg-red-50/50');
+                }
+
+                totalDebitInt += debitVal;
+                totalCreditInt += creditVal;
+            }
+
+            // Update nilai total di UI dengan format rupiah
+            document.getElementById('total-debit').innerText = formatRupiah(totalDebitInt);
+            document.getElementById('total-credit').innerText = formatRupiah(totalCreditInt);
+
+            // Live balanced indicator
+            const diffInt = Math.abs(totalDebitInt - totalCreditInt);
+            const indicatorDiv = document.getElementById('balance-indicator');
+            const indicatorText = document.getElementById('indicator-text');
+            const indicatorDot = document.getElementById('indicator-dot');
+            const diffValueSpan = document.getElementById('diff-value');
+
+            diffValueSpan.innerText = formatRupiah(diffInt);
+
+            const isBalanced = (totalDebitInt === totalCreditInt) && (totalDebitInt > 0);
+
+            if (isBalanced) {
+                indicatorDiv.className = "px-4 py-2 rounded-lg font-bold text-xs tracking-wide uppercase bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-2";
+                indicatorText.innerText = "SEIMBANG";
+                indicatorDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-600";
+                document.getElementById('diff-container').style.display = 'none';
+            } else {
+                indicatorDiv.className = "px-4 py-2 rounded-lg font-bold text-xs tracking-wide uppercase bg-red-100 text-red-700 border border-red-300 flex items-center gap-2";
+                indicatorText.innerText = "TIDAK SEIMBANG";
+                indicatorDot.className = "w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse";
+                document.getElementById('diff-container').style.display = 'block';
+            }
+
+            validateForm(allRowsValid, isBalanced, rows.length);
+        }
+
+        // Validasi Header & Tombol Submit
+        function validateForm(allRowsValid = true, isBalanced = false, rowCount = 1) {
+            if (voucherState === 'POSTED') return;
+
+            const dateVal = document.getElementById('voucher-date').value;
+            const refVal = document.getElementById('voucher-ref').value.trim();
+            const descVal = document.getElementById('voucher-desc').value.trim();
+
+            const headerComplete = dateVal !== '' && refVal !== '' && descVal !== '';
+            const submitBtn = document.getElementById('btn-submit');
+
+            if (headerComplete && allRowsValid && isBalanced && rowCount > 0) {
+                submitBtn.disabled = false;
+            } else {
+                submitBtn.disabled = true;
+            }
+        }
+
+        // Submit Voucher dan Kunci Form (Read-Only)
+        function submitVoucher() {
+            originalVoucherRef = document.getElementById('voucher-ref').value.trim();
+            voucherState = 'POSTED';
+            logActivity(`Mengirimkan (posting) voucher transaksi kas keluar dengan referensi: ${originalVoucherRef}`);
+
+            // Update Badge Status
+            const badge = document.getElementById('status-badge');
+            badge.className = "px-3 py-1.5 rounded-lg text-xs font-bold tracking-wider uppercase bg-emerald-100 text-emerald-800 border border-emerald-200";
+            badge.innerText = "POSTED";
+
+            // Kunci seluruh input header
+            document.getElementById('voucher-date').disabled = true;
+            document.getElementById('voucher-ref').disabled = true;
+            document.getElementById('voucher-desc').disabled = true;
+
+            // Kunci semua baris tabel dan tombol tambah
+            document.getElementById('btn-add-row').style.display = 'none';
+            document.getElementById('btn-submit').style.display = 'none';
+
+            // Tampilkan tombol Buat Jurnal Pembalik
+            const btnReverse = document.getElementById('btn-reverse');
+            btnReverse.classList.remove('hidden');
+            btnReverse.classList.add('flex');
+
+            const inputs = document.querySelectorAll('input, select');
+            inputs.forEach(input => {
+                input.disabled = true;
+            });
+
+            // Sembunyikan tombol hapus baris
+            const deleteButtons = document.querySelectorAll('#journal-tbody button');
+            deleteButtons.forEach(btn => btn.style.display = 'none');
+
+            alertSuccess("Voucher Kas Keluar berhasil diposting! Seluruh data kini terkunci (read-only).");
+        }
+
+        // Fitur Buat Jurnal Pembalik (Reversing Journal)
+        function createReversingJournal() {
+            logActivity(`Membuat jurnal pembalik merujuk pada nomor voucher asal: ${originalVoucherRef}`);
+
+            // Ambil data baris jurnal saat ini dari tabel yang terkunci
+            const tbody = document.getElementById('journal-tbody');
+            const rows = tbody.rows;
+            const currentJournalData = [];
+
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const accountCode = row.querySelector('.account-code-select').value;
+                const debitVal = parseRupiahInput(row.querySelector('.debit-input').value);
+                const creditVal = parseRupiahInput(row.querySelector('.credit-input').value);
+
+                // Dibalik: Debit lama menjadi Kredit baru, Kredit lama menjadi Debit baru
+                currentJournalData.push({
+                    code: accountCode,
+                    debit: creditVal,
+                    credit: debitVal
+                });
+            }
+
+            // Reset state form menjadi Draft baru untuk jurnal pembalik
+            voucherState = 'DRAFT';
+            
+            // Unlock header
+            document.getElementById('voucher-date').disabled = false;
+            document.getElementById('voucher-ref').disabled = false;
+            document.getElementById('voucher-desc').disabled = false;
+
+            // Set referensi baru merujuk ke voucher asal
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('voucher-date').value = today;
+            document.getElementById('voucher-ref').value = `REV-${originalVoucherRef}`;
+            document.getElementById('voucher-desc').value = `Jurnal Pembalik dari VKK Ref: ${originalVoucherRef}`;
+
+            // Reset badge
+            const badge = document.getElementById('status-badge');
+            badge.className = "px-3 py-1.5 rounded-lg text-xs font-bold tracking-wider uppercase bg-amber-100 text-amber-800 border border-amber-200";
+            badge.innerText = "Draft";
+
+            // Sembunyikan tombol pembalik, tampilkan tombol tambah & submit
+            const btnReverse = document.getElementById('btn-reverse');
+            btnReverse.classList.add('hidden');
+            btnReverse.classList.remove('flex');
+
+            document.getElementById('btn-add-row').style.display = 'flex';
+            document.getElementById('btn-submit').style.display = 'flex';
+
+            // Kosongkan dan isi ulang tabel dengan posisi debit/kredit dibalik
+            tbody.innerHTML = '';
+
+            currentJournalData.forEach(item => {
+                addRow(item.code, item.debit, item.credit);
+            });
+
+            // Unlock semua input
+            const inputs = document.querySelectorAll('input, select');
+            inputs.forEach(input => {
+                input.disabled = false;
+            });
+
+            // Pastikan input nama akun tetap readonly
+            const nameInputs = document.querySelectorAll('.account-name-input');
+            nameInputs.forEach(input => {
+                input.readOnly = true;
+            });
+
+            alertSuccess(`Berhasil membuat draft Jurnal Pembalik merujuk ke ${originalVoucherRef}! Posisi Debit & Kredit telah dibalik.`);
+        }
+
+        // Custom modal message box pengganti alert()
+        function alertSuccess(message) {
+            logActivity("[Success] " + message);
+            const alertBox = document.createElement('div');
+            alertBox.className = "fixed top-6 right-6 z-50 bg-emerald-600 text-white px-6 py-3 rounded-xl shadow-lg border border-emerald-500 text-sm font-medium animate-bounce";
+            alertBox.innerText = message;
+            document.body.appendChild(alertBox);
+            setTimeout(() => alertBox.remove(), 4000);
+        }
+
+        function alertWarning(message) {
+            logActivity("[Warning] " + message);
+            const alertBox = document.createElement('div');
+            alertBox.className = "fixed top-6 right-6 z-50 bg-amber-600 text-white px-6 py-3 rounded-xl shadow-lg border border-amber-500 text-sm font-medium";
+            alertBox.innerText = message;
+            document.body.appendChild(alertBox);
+            setTimeout(() => alertBox.remove(), 4000);
+        }
+
+        // Canvas placeholder helper
+        function drawPlaceholderCanvas() {
+            const canvas = document.getElementById('voucherCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = "#f8fafc";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#64748b";
+            ctx.font = "12px Inter";
+            ctx.fillText("Voucher Preview Stamp Canvas", 20, 40);
+        }
+    </script>
+</body>
+</html>
